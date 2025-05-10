@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Recording Ayam - Kendedes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      background-color: #f4f4f4;
+      color: #333;
+    }
+
+    header {
+      background-color: #28a745;
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      flex-wrap: wrap;
+    }
+
+    header img {
+      height: 40px;
+      width: auto;
+      max-width: 100%;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin: 0;
+    }
+
+    main {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+
+    form {
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: 600;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+
+    button {
+      margin-top: 1.5rem;
+      padding: 12px 24px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #218838;
+    }
+
+    h2 {
+      margin-top: 3rem;
+      font-size: 1.3rem;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 1rem;
+      border-collapse: collapse;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+
+    th {
+      background-color: #007bff;
+      color: white;
+    }
+
+    canvas {
+      margin-top: 2rem;
+    }
+
+    .export-btn {
+      background-color: #007bff;
+      margin-top: 1rem;
+    }
+
+    .export-btn:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <img src="logo.png" alt="Logo Ayam Kampung Kendedes" />
+    <h1>Agro Wisata Ayam Kampung Kendedes Recording Harian</h1>
+  </header>
+
+  <main>
+    <form id="recordForm">
+      <label for="tanggal">Tanggal</label>
+      <input type="date" id="tanggal" required>
+
+      <label for="jumlahAyam">Jumlah Ayam</label>
+      <input type="number" id="jumlahAyam" required>
+
+      <label for="pakan">Pakan (kg)</label>
+      <input type="number" step="0.1" id="pakan" required>
+
+      <label for="kematian">Jumlah Kematian</label>
+      <input type="number" id="kematian" required>
+
+      <label for="catatan">Catatan</label>
+      <textarea id="catatan" rows="3"></textarea>
+
+      <button type="submit">Simpan Data</button>
+    </form>
+
+    <h2>Data Tersimpan</h2>
+    <button class="export-btn" onclick="exportToExcel()">📤 Ekspor ke Excel</button>
+
+    <table id="dataTable">
+      <thead>
+        <tr>
+          <th>Tanggal</th>
+          <th>Jumlah Ayam</th>
+          <th>Pakan (kg)</th>
+          <th>Kematian</th>
+          <th>Catatan</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <canvas id="chartAyam" height="100"></canvas>
+  </main>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS for Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+    const form = document.getElementById("recordForm");
+    const dataTableBody = document.querySelector("#dataTable tbody");
+    const ctx = document.getElementById('chartAyam').getContext('2d');
+    let chart;
+    let dataList = JSON.parse(localStorage.getItem("recordAyam")) || [];
+
+    function renderTable() {
+      dataTableBody.innerHTML = "";
+      dataList.forEach((data) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${data.tanggal}</td>
+          <td>${data.jumlahAyam}</td>
+          <td>${data.pakan}</td>
+          <td>${data.kematian}</td>
+          <td>${data.catatan}</td>
+        `;
+        dataTableBody.appendChild(row);
+      });
+      renderChart();
+    }
+
+    function renderChart() {
+      const labels = dataList.map(item => item.tanggal);
+      const jumlahAyam = dataList.map(item => parseInt(item.jumlahAyam));
+
+      if (chart) chart.destroy();
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Jumlah Ayam',
+            data: jumlahAyam,
+            fill: false,
+            borderColor: 'green',
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: true, text: 'Pertumbuhan Jumlah Ayam' }
+          }
+        }
+      });
+    }
+
+    function exportToExcel() {
+      const worksheet = XLSX.utils.json_to_sheet(dataList);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Data Ayam");
+      XLSX.writeFile(workbook, "recording-ayam.xlsx");
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const newData = {
+        tanggal: document.getElementById("tanggal").value,
+        jumlahAyam: document.getElementById("jumlahAyam").value,
+        pakan: document.getElementById("pakan").value,
+        kematian: document.getElementById("kematian").value,
+        catatan: document.getElementById("catatan").value,
+      };
+      dataList.push(newData);
+      localStorage.setItem("recordAyam", JSON.stringify(dataList));
+      renderTable();
+      form.reset();
+    });
+
+    renderTable();
+  </script>
+
+</body>
+</html>
